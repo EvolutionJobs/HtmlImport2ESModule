@@ -2,18 +2,27 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace HtmlImport2ESModule
 {
     class Program
     {
-        static readonly Regex HtmlImportPattern = new Regex(@"<link.*\s+rel=(""import""|import)\s+href=(?<href>[^>]+)>", RegexOptions.IgnoreCase | RegexOptions.ECMAScript | RegexOptions.Multiline);
+        static readonly Regex HtmlImportPattern = new Regex(
+            @"<link.*\s+rel=(""import""|import)\s+href=""(?<href>[^>]+)"">", 
+            RegexOptions.IgnoreCase | RegexOptions.ECMAScript | RegexOptions.Multiline);
 
-        static readonly Regex DomModuleIsPattern = new Regex(@"static\s+get\s+is\s*\(\s*\)\s*\{\s*return\s*['|""](?<is>\w+(?>\-\w+)+)['|""]\s*\;*\s*}", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        static readonly Regex DomModuleIsPattern = new Regex(
+            @"static\s+get\s+is\s*\(\s*\)\s*\{\s*return\s*['|""](?<is>\w+(?>\-\w+)+)['|""]\s*\;*\s*}", 
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-        static readonly Regex NestedScriptPattern = new Regex(@"\<script\s+.*src=""(?<src>[\w\-\.\d]+)"".*>\s*<\/script>", RegexOptions.IgnoreCase | RegexOptions.ECMAScript);
+        static readonly Regex NestedScriptPattern = new Regex(
+            @"\<script\s+.*src=""(?<src>[\w\-\.\d]+)"".*>\s*<\/script>", 
+            RegexOptions.IgnoreCase | RegexOptions.ECMAScript);
 
-        static readonly Regex DomModuleTemplatePattern = new Regex(@"\<dom\-module\s+(?>strip-whitespace\s+)?id=\""(?<id>[\w\-]+)\""(?>\s+strip-whitespace)?\s*\>\s*<template(?>\s+strip-whitespace)?>\s*(?<template>.*)\s*<\/template>\s*<\/dom-module>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        static readonly Regex DomModuleTemplatePattern = new Regex(
+            @"\<dom\-module\s+(?>strip-whitespace\s+)?id=\""(?<id>[\w\-]+)\""(?>\s+strip-whitespace)?\s*\>\s*<template(?>\s+strip-whitespace)?>\s*(?<template>.*)\s*<\/template>\s*<\/dom-module>", 
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
 
         static void WriteColour(string message, ConsoleColor background, ConsoleColor foreground) {
@@ -132,8 +141,18 @@ namespace HtmlImport2ESModule
                     continue;
                 }
 
+                WriteSuccess($"\tTemplate Found: {template.Length}");
 
-                WriteSuccess($"\tTemplate: {template.Length}");
+                if (htmlImports.Count > 0)
+                    scripts.AddRange(htmlImports.Select(i => i.Substring(0, i.Length - 4) + "js"));
+
+                string beforeJS = js.Substring(0, matchDomIs.Index + matchDomIs.Length);
+                string afterJS = js.Substring(matchDomIs.Index + matchDomIs.Length);
+                string jsCombined = $@"{string.Join('\n', scripts.Select(s=>$"import '{s}';"))}
+{beforeJS}
+    static get template() {{ return `{template}`; }}
+{afterJS}";
+                WriteColour(jsCombined, ConsoleColor.Gray, ConsoleColor.DarkGray);
             }
 
             Console.ReadLine();
