@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Linq;
+using System.Text;
 
 namespace HtmlImport2ESModule
 {
@@ -225,7 +226,7 @@ const styles = html`{styles}`;
 {afterJS}";
                 // WriteColour(jsCombined, ConsoleColor.Gray, ConsoleColor.DarkGray);
 
-                File.WriteAllText(f, jsCombined);
+                File.WriteAllText(f, jsCombined, Encoding.UTF8);
                 File.Delete(templateFilename);
                 WriteSuccess($"\tTemplate ({jsCombined.Length} chars) Moved from:\r\n\t\t{templateFilename} to\r\n\t\t{f}");
             }
