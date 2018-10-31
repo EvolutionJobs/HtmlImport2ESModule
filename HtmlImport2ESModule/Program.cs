@@ -163,9 +163,6 @@ namespace HtmlImport2ESModule
                     continue;
                 }
 
-                WriteSuccess($"\tTemplate Found: {template.Length}");
-
-
                 // Get the relative location of the library to the HTML imports, and figure out the path to the new ES Modules from that
                 string relativeLibDir = $"../../{library}/"; // best guess
                 if (htmlImports.Count > 0)
@@ -226,7 +223,11 @@ const styles = html`{styles}`;
 {beforeJS}
     static get template() {{ return html`${{styles}}{template}`; }}
 {afterJS}";
-                WriteColour(jsCombined, ConsoleColor.Gray, ConsoleColor.DarkGray);
+                // WriteColour(jsCombined, ConsoleColor.Gray, ConsoleColor.DarkGray);
+
+                File.WriteAllText(f, jsCombined);
+                File.Delete(templateFilename);
+                WriteSuccess($"\tTemplate ({jsCombined.Length} chars) Moved from:\r\n\t\t{templateFilename} to\r\n\t\t{f}");
             }
 
             Console.ReadLine();
@@ -252,6 +253,14 @@ const styles = html`{styles}`;
         }
 
         static bool NotDeprecated(string resource) {
+
+            // Remove deprecated Polymer 2 controls
+            if (resource.EndsWith("polymer.html") ||
+                resource.EndsWith("polymer-element.html") ||
+                resource.EndsWith("dom-repeat.html") ||
+                resource.EndsWith("dom-if.html"))
+                return false;
+
             return true;
         }
 
@@ -263,6 +272,11 @@ const styles = html`{styles}`;
             foreach (var styleImport in includeStyles)
                 if (resource.EndsWith(styleImport + ".html"))
                     return $"import {DashToCamelCase(styleImport)} from '{ModulePrefix(js)}';";
+
+            // Polymer 3 components are under @polymer
+            js = js.Replace("/polymer/", "/@polymer/polymer/");
+            js = js.Replace("/iron-", "/@polymer/iron-");
+            js = js.Replace("/paper-", "/@polymer/paper-");
 
             return $"import '{ModulePrefix(js)}';";
         }
