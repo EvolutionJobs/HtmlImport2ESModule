@@ -23,3 +23,14 @@ This is very much utlity code, with most corner cases just crashing. Expect bugs
 
 Dependencies are assumed to be in a library directory, and the name of this directory is used to find/replace dependencies references.
 This is a very quick and dirty way to do this - if you want to use this in your own application you will either have to use the same pattern or write the relative link checking code yourself.
+
+## Why not use the offical [polymer-modulizer](https://github.com/Polymer/polymer-modulizer)?
+
+Because it doesn't work. 
+Specifically:
+
+- [polymer-modulizer#428](https://github.com/Polymer/polymer-modulizer/issues/428) It runs out of memory.
+- [polymer-modulizer#429](https://github.com/Polymer/polymer-modulizer/issues/429) It breaks if updating isolated from Git.
+- [polymer-modulizer#438](https://github.com/Polymer/polymer-modulizer/issues/438) It builds `<div>` tags with `innerText` rather than creating templates.
+
+This doesn't aim to do all the complex parsing of JS that the modualizer aspires to - I just want to make the same pattern changes to a few hundred HTML import components.
