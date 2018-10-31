@@ -335,9 +335,7 @@ const styles = html`{styles}`;
 
             // Remove deprecated Polymer 2 controls
             if (resource.EndsWith("polymer.html") ||
-                resource.EndsWith("polymer-element.html") ||
-                resource.EndsWith("dom-repeat.html") ||
-                resource.EndsWith("dom-if.html"))
+                resource.EndsWith("polymer-element.html"))
                 return false;
 
             return true;
