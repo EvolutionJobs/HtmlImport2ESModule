@@ -44,6 +44,8 @@ namespace HtmlImport2ESModule
             @"<script[\w\s\""\=]*>\s*(?<script>.*)\s*<\/script>",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
+        #region console helpers
+
         static void WriteColour(string message, ConsoleColor background, ConsoleColor foreground)
         {
             var bg = Console.BackgroundColor;
@@ -60,6 +62,8 @@ namespace HtmlImport2ESModule
         static void WriteError(string message) => WriteColour(message, ConsoleColor.DarkRed, ConsoleColor.White);
 
         static void WriteSuccess(string message) => WriteColour(message, ConsoleColor.DarkGreen, ConsoleColor.White);
+
+        #endregion
 
         static void Main(string[] args)
         {
@@ -286,7 +290,7 @@ namespace HtmlImport2ESModule
             // Put it all together - TS, Polymer 3 element, repurposed HTML imports, existing scripts, and add the template after the 
             string result = $@"// @ts-check
 import {{ PolymerElement, html }} from '{relativeLibDir}@polymer/polymer/polymer-element.js';
-{string.Join('\n', htmlImports.Where(NotDeprecated).Select(i => HtmlResourceToESModule(i, includeStyles)))}
+{string.Join('\n', htmlImports.Where(NotDeprecated).Select(i => HtmlResourceToESModule(i, includeStyles, library)))}
 {string.Join('\n', scripts.Select(JSResourceToESModule))}
 
 const styles = html`{styles}`;
@@ -298,9 +302,16 @@ const styles = html`{styles}`;
             return (null, result);
         }
 
+        /// <summary>Convert web component name covention to JS camelCase, so my-control becomes myControl.</summary>
+        /// <param name="dash">The dash seperated web component name.</param>
+        /// <returns>The camel case equivalent.</returns>
         static string DashToCamelCase(string dash) =>
             new string(DashToCamelCaseImpl(dash).ToArray());
 
+        /// <summary>Loop through a string, making letters lowercase unless after a dash, in which case uppercase.
+        /// Dashes are skipped.</summary>
+        /// <param name="dash">The string to loop through.</param>
+        /// <returns>Enumeration of chars.</returns>
         static IEnumerable<char> DashToCamelCaseImpl(string dash)
         {
             bool afterDash = false;
@@ -317,6 +328,9 @@ const styles = html`{styles}`;
             }
         }
 
+        /// <summary>Return tru if this is one of the Polymer 2 iron- or paper- components we can still use in Polymer 3.</summary>
+        /// <param name="resource">The resource to check.</param>
+        /// <returns>True if still valid, false if deprecated.</returns>
         static bool NotDeprecated(string resource) {
 
             // Remove deprecated Polymer 2 controls
@@ -329,8 +343,14 @@ const styles = html`{styles}`;
             return true;
         }
 
-        static string HtmlResourceToESModule(string resource, string[] includeStyles)
+        /// <summary>Convert a referenced Polymer 2 HTML import to the equivalent Polymer 3 ES Module reference.</summary>
+        /// <param name="resource">The resource to parse.</param>
+        /// <param name="includeStyles">Styles ifrom include attributes in Polymer 2, which become imported parameters in Polymer 3.</param>
+        /// <param name="library">The library dir we expect to find the components under.</param>
+        /// <returns></returns>
+        static string HtmlResourceToESModule(string resource, string[] includeStyles, string library)
         {
+            // We have something.html, we want something.js
             string js = resource.Substring(0, resource.Length - 4) + "js";
 
             // If a style include the name as the default, as ES Module imported styles are explicit, not a side effect
@@ -338,17 +358,22 @@ const styles = html`{styles}`;
                 if (resource.EndsWith(styleImport + ".html"))
                     return $"import {DashToCamelCase(styleImport)} from '{ModulePrefix(js)}';";
 
-            // Polymer 3 components are under @polymer
-            js = js.Replace("/polymer/", "/@polymer/polymer/");
-            js = js.Replace("/iron-", "/@polymer/iron-");
-            js = js.Replace("/paper-", "/@polymer/paper-");
+            // Polymer 3 components are under @polymer, rather than directly in the dir.
+            js = js.Replace($"/{library}/polymer/", $"/{library}/@polymer/polymer/");
+            js = js.Replace($"/{library}/iron-", $"/{library}/@polymer/iron-");
+            js = js.Replace($"/{library}/paper-", $"/{library}/@polymer/paper-");
 
             return $"import '{ModulePrefix(js)}';";
         }
 
+        /// <summary>Convert a linked script src to an import statement with assumed side effects.
+        /// The may break some JS resorces, as module imports are always strict.</summary>
+        /// <param name="resource">The resource to reference.</param>
+        /// <returns>The import statement.</returns>
         static string JSResourceToESModule(string resource) =>
             $"import '{ModulePrefix(resource)}';";
 
+        /// <summary>Add a ./ prefix if needed.</summary>
         static string ModulePrefix(string resource) =>
             resource.StartsWith('.') ? resource : "./" + resource;
     }
